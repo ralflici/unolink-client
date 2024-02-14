@@ -37,11 +37,11 @@
 !_TAG_PARSER_VERSION!DTD	0.0	/current.age/
 !_TAG_PARSER_VERSION!Go	0.0	/current.age/
 !_TAG_PATTERN_LENGTH_LIMIT	96	/0 for no limit/
-!_TAG_PROC_CWD	/home/ralf/dev/sw/go/unolink-client/	//
+!_TAG_PROC_CWD	/home/ralf/dev/unolink-client/	//
 !_TAG_PROGRAM_AUTHOR	Universal Ctags Team	//
 !_TAG_PROGRAM_NAME	Universal Ctags	/Derived from Exuberant Ctags/
 !_TAG_PROGRAM_URL	https://ctags.io/	/official site/
-!_TAG_PROGRAM_VERSION	6.0.0	//
+!_TAG_PROGRAM_VERSION	6.0.0	/p6.0.20231203.0/
 !_TAG_ROLE_DESCRIPTION!DTD!element	attOwner	/attributes owner/
 !_TAG_ROLE_DESCRIPTION!DTD!parameterEntity	condition	/conditions/
 !_TAG_ROLE_DESCRIPTION!DTD!parameterEntity	elementName	/element names/
@@ -139,6 +139,7 @@ model	display/display.go	/^type model struct {$/;"	s	package:display
 restPort	cmd/root.go	/^	restPort   uint16$/;"	v	package:cmd	typeref:typename:uint16
 rootCmd	cmd/root.go	/^	rootCmd = &cobra.Command{$/;"	v	package:cmd
 run	cmd/root.go	/^func run(address string, streamPort, restPort uint16) {$/;"	f	package:cmd
+start	display/display.go	/^var start = time.Now()$/;"	v	package:display
 stats	stats/stats.go	/^package stats$/;"	p
 streamPort	cmd/root.go	/^	streamPort uint16$/;"	v	package:cmd	typeref:typename:uint16
 table	display/display.go	/^	table   table.Model$/;"	m	struct:display.model	typeref:typename:table.Model

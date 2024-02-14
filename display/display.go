@@ -2,6 +2,7 @@ package display
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	def "unolink-client/definitions"
@@ -47,13 +48,15 @@ func initalModel() model {
 		devices: &def.Devices,
 		// selected:    make(map[int]struct{}),
 		// toBeCleared: false,
-		content: true,
+		content: false,
 	}
 }
 
 var baseStyle = lipgloss.NewStyle().
 	BorderStyle(lipgloss.NormalBorder()).
 	BorderForeground(lipgloss.Color("240"))
+
+var start = time.Now()
 
 func (m model) Init() tea.Cmd { return tickCmd(m) }
 
@@ -85,6 +88,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.table = m.updateTable()
 		for i := range *m.devices {
 			(*m.devices)[i].Counter.Clear()
+            start = time.Now()
 		}
 		return m, tickCmd(m)
 	}
@@ -107,7 +111,7 @@ func (m model) updateTable() table.Model {
 						return "[ ]"
 					}
 				}(),
-				(*m.devices)[i].Id.String(),
+				strings.ToUpper((*m.devices)[i].Id.String()),
 				fmt.Sprintf("%d", (*m.devices)[i].Time),
 				fmt.Sprintf("%d", (*m.devices)[i].Speed),
 				fmt.Sprintf("%d", (*m.devices)[i].Hrm),
@@ -126,7 +130,7 @@ func (m model) updateTable() table.Model {
 		columns = []table.Column{
 			{Title: "Live", Width: 4},
 			{Title: "ID", Width: 6},
-			{Title: "Time", Width: 6},
+			{Title: "Time", Width: 8},
 			{Title: "Speed", Width: 6},
 			{Title: "HRM", Width: 6},
 			{Title: "Power", Width: 6},
@@ -153,26 +157,29 @@ func (m model) updateTable() table.Model {
 						return "[ ]"
 					}
 				}(),
-				(*m.devices)[i].Id.String(),
+				strings.ToUpper((*m.devices)[i].Id.String()),
 				fmt.Sprintf("%d", (*m.devices)[i].Counter.NumInstantaneous),
 				fmt.Sprintf("%d", (*m.devices)[i].Counter.NumCumulative),
-				fmt.Sprintf("%d", (*m.devices)[i].Counter.NumPosition),
+				// fmt.Sprintf("%d", (*m.devices)[i].Counter.NumPosition),
 				fmt.Sprintf("%d", (*m.devices)[i].Counter.NumOtherData1),
 				fmt.Sprintf("%d", (*m.devices)[i].Counter.NumOtherData2),
 				fmt.Sprintf("%d", (*m.devices)[i].Counter.NumOtherData3),
-				fmt.Sprintf("%d", (*m.devices)[i].Counter.Total())}
+				fmt.Sprintf("%d", (*m.devices)[i].Counter.Total()),
+                fmt.Sprintf("%s", time.Since(start))}
 			rows = append(rows, row)
 		}
+        // start = time.Now()
 		columns = []table.Column{
 			{Title: "Live", Width: 4},
 			{Title: "ID", Width: 6},
 			{Title: "IN", Width: 3},
 			{Title: "CU", Width: 3},
-			{Title: "PO", Width: 3},
+			// {Title: "PO", Width: 3},
 			{Title: "O1", Width: 3},
 			{Title: "O2", Width: 3},
 			{Title: "O3", Width: 3},
 			{Title: "TOT", Width: 3},
+			{Title: "Elapsed", Width: 12},
 		}
 		// update in this order to ensure rows have less elements than columns
 		m.table.SetRows(rows)

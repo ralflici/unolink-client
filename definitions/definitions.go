@@ -5,6 +5,26 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+	"strings"
+	"sync"
+)
+
+var (
+	Devices          []DeviceState
+	List             []ListDevices
+	TelemetryMapping map[string]uint8
+	WaitGroup        sync.WaitGroup
+)
+
+const (
+    SPEED_CONVERSION_FACTOR = 1.94384 * 1000
+
+	Cumulative    = 0x22
+	Instantaneous = 0x23
+	Position      = 0x24
+	OtherData1    = 0x28
+	OtherData2    = 0x2B
+	OtherData3    = 0x2C
 )
 
 type RadioAddress [3]uint8
@@ -14,7 +34,7 @@ func (r RadioAddress) Slice() []byte {
 }
 
 func (r RadioAddress) String() string {
-	return fmt.Sprintf("%x%x%x", r[0], r[1], r[2])
+	return fmt.Sprintf("%02X%02X%02X", r[0], r[1], r[2])
 }
 
 func RadioAddressFromString(s string) (RadioAddress, error) {
@@ -71,9 +91,10 @@ type DeviceState struct {
 	Id            RadioAddress
 	Slot          uint8
 	LiveOn        bool
+    Battery       uint8
 	Counter       PacketCounter
 	Time          uint32
-	Speed         uint16
+	Speed         float32
 	Hrm           uint8
 	Power         float32
 	Vo2           float32
@@ -116,7 +137,7 @@ func (d *DeviceState) UpdateCumulative(packet []byte) {
 func (d *DeviceState) UpdateInstantaneous(packet []byte) {
 	d.Counter.NumInstantaneous++
 	d.Time = binary.LittleEndian.Uint32(append(packet[4:7], []byte{0x00}...))
-	d.Speed = binary.LittleEndian.Uint16(packet[7:9])
+	d.Speed = float32(binary.LittleEndian.Uint16(packet[7:9])) / SPEED_CONVERSION_FACTOR
 	d.Hrm = packet[9]
 	d.Power = math.Float32frombits(binary.LittleEndian.Uint32(packet[10:14]))
 	d.Vo2 = math.Float32frombits(binary.LittleEndian.Uint32(packet[14:18]))
@@ -155,13 +176,104 @@ func (d *DeviceState) UpdateOtherData3(packet []byte) {
 	d.Hmld = binary.LittleEndian.Uint32(append(packet[7:10], []byte{0x00}...))
 }
 
-var Devices []DeviceState
+func GetDevice(addr RadioAddress) *DeviceState {
+    for i := range Devices {
+        if Devices[i].AddressMatches(addr) {
+            return &Devices[i]
+        }
+    }
+    return nil
+}
 
-const (
-	Cumulative    = 0x22
-	Instantaneous = 0x23
-	Position      = 0x24
-	OtherData1    = 0x28
-	OtherData2    = 0x2B
-	OtherData3    = 0x2C
-)
+func UpdateDevices() {
+    for i := range List {
+        addr, err := RadioAddressFromString(List[i].Id)
+        if err != nil {
+            fmt.Println("Error parsing radio address:", err)
+            continue
+        }
+        var dev = GetDevice(addr)
+        if dev == nil {
+            dev = CreateDevice(addr)
+        }
+
+        b := strings.Replace(List[i].Batt, "%", "", 1)
+        batt64, err := strconv.ParseUint(b, 10, 64)
+        if err != nil {
+            fmt.Println("Error parsing battery value:", err)
+            continue
+        }
+        dev.Battery = uint8(batt64)
+    }
+}
+
+type ListDevices struct {
+	Batt    string `json:"batt"`
+	Id      string `json:"code"`
+	Version string `json:"fmw"`
+}
+
+func CreateDevice(addr [3]uint8) *DeviceState {
+	device := DeviceState{
+		Id: addr,
+        Slot: 0,
+        LiveOn: false,
+        Battery: 255,
+		Counter: PacketCounter{
+			NumInstantaneous: 0,
+			NumCumulative:    0,
+			NumPosition:      0,
+			NumOtherData1:    0,
+			NumOtherData2:    0,
+			NumOtherData3:    0,
+		},
+		Time:          0,
+		Speed:         0,
+		Hrm:           0,
+		Power:         0.0,
+		Vo2:           0.0,
+		Energy:        0.0,
+		Distance:      0.0,
+		EquivDistance: 0.0,
+		PeCounter:     0,
+		Acc:           0,
+		Dec:           0,
+		Jump:          0,
+		Impact:        0,
+		CumDistance:   [5]uint32{0, 0, 0, 0, 0},
+		Hmld:          0,
+		TagId:         0,
+		Lat:           0,
+		Lng:           0,
+	}
+	Devices = append(Devices, device)
+	return &device
+}
+
+func updatePacket(last *uint32, current []uint8) {
+	*last = binary.LittleEndian.Uint32(current)
+}
+
+func DecodePacket(packet []byte) DeviceState {
+	deviceID := RadioAddress{packet[3], packet[2], packet[1]}
+	device := GetDevice(deviceID)
+	if device == nil {
+		device = CreateDevice(deviceID)
+	}
+
+	switch packet[0] {
+	case Cumulative:
+        device.UpdateCumulative(packet[:])
+	case Instantaneous:
+        device.UpdateInstantaneous(packet[:])
+	case Position:
+        device.UpdatePosition(packet[:])
+	case OtherData1:
+        device.UpdateOtherData1(packet[:])
+	case OtherData2:
+        device.UpdateOtherData2(packet[:])
+	case OtherData3:
+        device.UpdateOtherData3(packet[:])
+	}
+	return *device
+}

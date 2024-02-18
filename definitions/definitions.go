@@ -6,14 +6,12 @@ import (
 	"math"
 	"strconv"
 	"strings"
-	"sync"
 )
 
 var (
 	Devices          []DeviceState
 	List             []ListDevices
 	TelemetryMapping map[string]uint8
-	WaitGroup        sync.WaitGroup
 )
 
 const (

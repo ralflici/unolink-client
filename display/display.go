@@ -404,7 +404,6 @@ func (m model) updateTable() table.Model {
 			// (*m.devices)[i].Counter.Clear()
 		}
 		columns = []table.Column{
-			// {Title: "󰐻 ", Width: 3},
 			{Title: "Live", Width: 4},
 			{Title: "ID", Width: 6},
 			{Title: "Slot", Width: 4},
@@ -461,7 +460,6 @@ func (m model) updateTable() table.Model {
 		}
 		// start = time.Now()
 		columns = []table.Column{
-			// {Title: "󰐻 ", Width: 3},
 			{Title: "Live", Width: 4},
 			{Title: "ID", Width: 6},
 			{Title: "Slot", Width: 4},

@@ -21,7 +21,7 @@ var (
 
 	rootCmd = &cobra.Command{
 		Use:   "unolink-client",
-		Short: "Client for unolink for packet statistics",
+		Short: "Fancy terminal client for the Unolink",
 		Run: func(cmd *cobra.Command, args []string) {
 			// fmt.Println("Starting the client...")
 			run(ulAddress, streamPort, restPort)

@@ -17,6 +17,7 @@ import (
 const (
 	LIST_MAPPING_REFRESH      = 1 * time.Second
 	TELEMETRY_MAPPING_REFRESH = 1 * time.Second
+	STREAM_SOCKET_TIMEOUT     = 1 * time.Second
 )
 
 var (
@@ -113,6 +114,7 @@ func handleMapping(ctx context.Context, wg *sync.WaitGroup, errCh chan<- error, 
 
 func handleStream(ctx context.Context, wg *sync.WaitGroup, errCh chan<- error, quitCh <-chan struct{}) {
 	defer wg.Done()
+	var err error
 	tcpAddress, err := net.ResolveTCPAddr("tcp", fmt.Sprintf(address+":%d", streamPort))
 	conn, err := net.DialTCP("tcp", nil, tcpAddress)
 	if err != nil {
@@ -131,15 +133,16 @@ func handleStream(ctx context.Context, wg *sync.WaitGroup, errCh chan<- error, q
 		case <-ctx.Done():
 			return
 		default:
-			conn.SetReadDeadline(time.Now().Add(1 * time.Second))
-			reply := make([]byte, 22)
-			_, err = conn.Read(reply)
-			// if err != nil {
-			// 	errCh <- err
-			// 	return
-			// }
+			var bytes = make([]byte, 22)
+			for numBytes := 0; numBytes < 22; {
+				var n int = 0
+				conn.SetReadDeadline(time.Now().Add(STREAM_SOCKET_TIMEOUT))
+				bytes = make([]byte, 22)
+				n, err = conn.Read(bytes)
+				numBytes += n
+			}
 			if err == nil {
-				def.DecodePacket(reply)
+				def.DecodePacket(bytes)
 			}
 		}
 	}
@@ -203,17 +206,17 @@ func ToggleTelemetry(device string) {
 func StartTelemetry(devices []string) {
 	var url = fmt.Sprintf("http://"+address+":%d/startTelemetry?devices=", restPort)
 	for _, device := range devices {
-        url += device + "+"
+		url += device + "+"
 	}
 	url = url[:len(url)-1] // remove last '+'
-    url += "&"
+	url += "&"
 
-    for range devices {
-        url += "VO2Max=18.18+"
-    }
+	for range devices {
+		url += "VO2Max=18.18+"
+	}
 	url = url[:len(url)-1] // remove last '+'
 
-    fmt.Println(url)
+	fmt.Println(url)
 
 	client := resty.New()
 	_, err := client.R().Get(url)
@@ -233,6 +236,7 @@ func StopTelemetry() {
 	}
 }
 
+// Not supported anymore
 func TelemetryParty() {
 	url := fmt.Sprintf("http://"+address+":%d/telemetryParty", restPort)
 	client := resty.New()
